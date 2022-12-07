@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"regexp"
+	"github.com/shogo82148/androidbinary"
 
 	"github.com/go-yaml/yaml"
 	"github.com/gorilla/mux"
@@ -32,8 +33,8 @@ type ApkInfo struct {
 	PackageName  string `json:"packageName"`
 	MainActivity string `json:"mainActivity"`
 	Version      struct {
-		Code int    `json:"code"`
-		Name string `json:"name"`
+		Code androidbinary.Int32    `json:"code"`
+		Name androidbinary.String   `json:"name"`
 	} `json:"version"`
 }
 
@@ -482,12 +483,14 @@ type AccessTable struct {
 type UserControl struct {
 	Email string
 	// Access bool
+	Read   bool
 	Upload bool
 	Delete bool
 	Token  string
 }
 
 type AccessConf struct {
+	Protected    bool          `yaml:"protected" json:"protected"`
 	Upload       bool          `yaml:"upload" json:"upload"`
 	Delete       bool          `yaml:"delete" json:"delete"`
 	Users        []UserControl `yaml:"users" json:"users"`
@@ -737,6 +740,7 @@ func (s *HTTPStaticServer) readAccessConf(realPath string) (ac AccessConf) {
 	if err != nil {
 		log.Printf("Err format .ghs.yml: %v", err)
 	}
+	log.Printf("successfully read access config: %+v\n", ac)
 	return
 }
 

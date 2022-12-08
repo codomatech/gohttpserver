@@ -379,16 +379,41 @@ function loadFileOrDir(reqPath) {
 
 }
 
-function loadFileList(pathname) {
+var ghsLastPass = undefined
+function loadFileList(pathname, accessPassword) {
   var pathname = pathname || location.pathname + location.search;
   var retObj = null
   if (getQueryString("raw") !== "false") { // not a file preview
     var sep = pathname.indexOf("?") === -1 ? "?" : "&"
+    let headers = {}
+    accessPassword = accessPassword || ghsLastPass
+    if (accessPassword) {
+      headers["X-GHS-Access-Password"] = accessPassword
+      ghsLastPass = accessPassword
+    }
     retObj = $.ajax({
       url: pathname + sep + "json=true",
+      headers: headers,
       dataType: "json",
       cache: false,
       success: function (res) {
+        if (res.isAccessible === false) {
+          alert("You don't have permission to this folder")
+          res.files = []
+        }
+        if (res.wrongPassword) {
+          ghsLastPass = undefined
+        }
+        if (res.hasAccessPassword === true && (accessPassword === undefined || res.wrongPassword)) {
+          let accessPassword = prompt("Enter the access password to access the folder")
+          console.debug('entered password', accessPassword)
+          if (!accessPassword) {
+            res.files = []
+          } else {
+            loadFileList(pathname, accessPassword)
+            return
+          }
+        }
         res.files = _.sortBy(res.files, function (f) {
           var weight = f.type == 'dir' ? 1000 : 1;
           return -weight * f.mtime;

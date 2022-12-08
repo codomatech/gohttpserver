@@ -490,7 +490,7 @@ type UserControl struct {
 }
 
 type AccessConf struct {
-	Protected    bool          `yaml:"protected" json:"protected"`
+	AccessPassword string      `yaml:"accessPassword" json:"accessPassword"`
 	Upload       bool          `yaml:"upload" json:"upload"`
 	Delete       bool          `yaml:"delete" json:"delete"`
 	Users        []UserControl `yaml:"users" json:"users"`
@@ -499,7 +499,22 @@ type AccessConf struct {
 
 var reCache = make(map[string]*regexp.Regexp)
 
-func (c *AccessConf) canAccess(fileName string) bool {
+func (c *AccessConf) canAccess(r *http.Request, fileName string) bool {
+	if len(c.AccessPassword) != 0 {
+		log.Println("General folder access password is set")
+		if c.AccessPassword == "INACCESSIBLE" {
+			// magic value to deny access to a folder. use case: parent directory
+			// with each subdirectory has its own password
+			return false
+		}
+		password := r.Header.Get("X-GHS-Access-Password")
+		log.Printf("received access password in header (%d characters)\n", len(password))
+
+		if password != c.AccessPassword {
+			return false
+		}
+	}
+
 	for _, table := range c.AccessTables {
 		pattern, ok := reCache[table.Regex]
 		if !ok {
@@ -602,7 +617,7 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	// turn file list -> json
 	lrs := make([]HTTPFileInfo, 0)
 	for path, info := range fileInfoMap {
-		if !auth.canAccess(info.Name()) {
+		if !auth.canAccess(r, info.Name()) {
 			continue
 		}
 		lr := HTTPFileInfo{
@@ -630,9 +645,28 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 		lrs = append(lrs, lr)
 	}
 
+	hasAccessPassword := false
+	isAccessible := true
+	wrongPassword := false
+	if len(auth.AccessPassword) > 0 {
+		hasAccessPassword = true
+		if auth.AccessPassword == "INACCESSIBLE" {
+			isAccessible = false
+		} else {
+			headerPassword := r.Header.Get("X-GHS-Access-Password")
+			if len(headerPassword) > 0 && headerPassword != auth.AccessPassword {
+				wrongPassword = true
+			}
+		}
+		auth.AccessPassword = "*haha you wish*"
+	}
+
 	data, _ := json.Marshal(map[string]interface{}{
 		"files": lrs,
 		"auth":  auth,
+		"hasAccessPassword": hasAccessPassword,
+		"isAccessible": isAccessible,
+		"wrongPassword": wrongPassword,
 	})
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
@@ -740,7 +774,7 @@ func (s *HTTPStaticServer) readAccessConf(realPath string) (ac AccessConf) {
 	if err != nil {
 		log.Printf("Err format .ghs.yml: %v", err)
 	}
-	log.Printf("successfully read access config: %+v\n", ac)
+	//log.Printf("successfully read access config: %+v\n", ac)
 	return
 }
 

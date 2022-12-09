@@ -138,11 +138,6 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("op") == "archive" {
-		s.hZip(w, r)
-		return
-	}
-
 	log.Println("GET", path, realPath)
 	if r.FormValue("raw") == "false" || isDir(realPath) {
 		if r.Method == "HEAD" {

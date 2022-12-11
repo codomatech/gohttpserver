@@ -237,10 +237,10 @@ var vm = new Vue({
     },
     clickFileOrDir: function (f, e) {
       var reqPath = this.getEncodePath(f.name)
-      // TODO: fix here tomorrow
       if (f.type == "file") {
-        window.location.href = reqPath;
-        return;
+        e.preventDefault()
+        this.showFilePreview(f)
+        return false;
       }
       loadFileOrDir(reqPath);
       e.preventDefault()
@@ -248,6 +248,62 @@ var vm = new Vue({
     changePath: function (reqPath, e) {
       loadFileOrDir(reqPath);
       e.preventDefault()
+    },
+    showFilePreview: function (f) {
+      console.log('previewing', f);
+      let fpath = this.getEncodePath(f.name);
+      let ext = f.name.split(/\./).pop()
+      let EXT2LANG = {
+        asp: 'aspnet',
+        c: 'c', cpp: 'cpp', 'c++': 'cpp',
+        cs: 'csharp',
+        css: 'css',
+        coffee: 'coffeescript',
+        dart: 'dart',
+        Dockerfile: 'docker',
+        f: 'fortran',
+        go: 'go',
+        html: 'html', htm: 'html',
+        java: 'java',
+        js: 'javascript',
+        kt: 'kotlin',
+        lisp: 'lisp',
+        lua: 'lua',
+        m: 'matlab',
+        md: 'markdown',
+        php: 'php',
+        py: 'python',
+        r: 'r',
+        rb: 'ruby',
+        sh: 'bash',
+        sql: 'sql',
+        scala: 'scala',
+        vb: 'vb',
+        ts: 'typescript',
+        yml: 'yaml',
+      }
+      let language = EXT2LANG[ext.toLowerCase()]
+
+      if (!language) {
+        console.log('no known highlighting for this extention, just downloading', ext)
+        window.location.href = fpath
+        return
+      }
+
+      $.ajax({
+        url: fpath,
+        method: "GET",
+        success: function (res) {
+          $("#file-info-title").text(f.name);
+          let html = Prism.highlight(res, Prism.languages[language], language)
+          $("#file-info-content").html(html);
+          $("#file-info-modal").modal("show");
+          // console.log(JSON.stringify(res, null, 4));
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          showErrorMessage(jqXHR)
+        }
+      })
     },
     showInfo: function (f) {
       console.log(f);

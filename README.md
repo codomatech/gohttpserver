@@ -3,7 +3,11 @@
 [![Docker Automated build](https://img.shields.io/docker/automated/codeskyblue/gohttpserver)](https://hub.docker.com/repository/docker/codeskyblue/gohttpserver)
 
 - Goal: Make the best HTTP File Server.
-- Features: Human-friendly UI, file uploading support, direct QR-code generation for Apple & Android install package.
+- Features:
+  - human-friendly UI
+  - access control
+  - support file upload support
+  - direct QR-code generation
 
 [Demo site](https://gohttpserver.herokuapp.com/)
 
@@ -27,6 +31,7 @@ Tested with go-1.16
 1. [x] Upload support (auth by token or session)
 1. [x] README.md preview
 1. [x] HTTP Basic Auth
+1. [x] Per-Folder password (i.e. knowledge-based authentication)
 1. [x] Partial reload pages when directory change
 1. [x] When only one dir under dir, path will combine two together
 1. [x] Directory zip download
@@ -110,6 +115,11 @@ $ docker build -t codeskyblue/gohttpserver -f docker/Dockerfile .
 ```
 
 ## Authentication options
+
+- Per-folder passwords (Knowledge-based authentication)
+
+  You can set access password per folder in `.ghs.yml`. [Example](testdata/protected/.ghs.yml).
+
 - Enable basic http authentication
 
   ```sh
